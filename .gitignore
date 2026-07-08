@@ -1,0 +1,21 @@
+# Runtime folders — never commit users' audio or transcripts
+uploads/
+transcripts/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Whisper model cache (some setups put it here)
+*.pt
+models/
