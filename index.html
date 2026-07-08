@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transcribe</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1f232c;
+      --text: #e7e9ee;
+      --muted: #9aa3b2;
+      --accent: #7aa2f7;
+      --accent-2: #59d3a3;
+      --error: #f7768e;
+      --border: #262b35;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Oxygen, Ubuntu, sans-serif;
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+    header {
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Dropzone */
+    .drop {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop:hover, .drop.dragover {
+      border-color: var(--accent);
+      background: var(--panel-2);
+    }
+    .drop .big {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+    .drop .small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .drop input { display: none; }
+
+    .file-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel-2);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    .file-info .name {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .file-info button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .file-info button:hover { color: var(--text); }
+
+    button.primary {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      background: var(--accent);
+      color: #0f1115;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    button.primary:hover:not(:disabled) { filter: brightness(1.1); }
+    button.primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Progress */
+    .progress {
+      margin-top: 24px;
+    }
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .status-line .status {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .bar {
+      height: 8px;
+      background: var(--panel-2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .bar > div {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      width: 0;
+      transition: width 0.4s ease;
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Result */
+    .result {
+      margin-top: 20px;
+    }
+    .result-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .result-actions a {
+      flex: 1;
+      display: block;
+      text-align: center;
+      background: var(--accent-2);
+      color: #0f1115;
+      text-decoration: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .result-actions a.secondary {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .preview {
+      margin-top: 16px;
+      background: var(--panel-2);
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--muted);
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      display: none;
+    }
+
+    .error {
+      margin-top: 16px;
+      background: rgba(247, 118, 142, 0.1);
+      border: 1px solid var(--error);
+      color: var(--error);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 32px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Transcribe</h1>
+      <div class="subtitle">Local audio transcription &mdash; nothing leaves your machine.</div>
+    </header>
+
+    <div class="card" id="upload-card">
+      <label class="drop" id="drop">
+        <div class="big">Drop an audio file here, or click to choose</div>
+        <div class="small">mp3 &middot; m4a &middot; wav &middot; flac &middot; ogg &middot; mp4</div>
+        <input type="file" id="file-input" accept="audio/*,video/mp4,.m4a,.mp3,.wav,.flac,.ogg" />
+      </label>
+
+      <div class="file-info hidden" id="file-info">
+        <div class="name" id="file-name"></div>
+        <button type="button" id="clear-file" title="Remove">&times;</button>
+      </div>
+
+      <button class="primary" id="start" disabled>Start transcription</button>
+
+      <div class="progress hidden" id="progress">
+        <div class="status-line">
+          <span class="status" id="status-text">Preparing&hellip;</span>
+          <span id="pct-text">0%</span>
+        </div>
+        <div class="bar"><div id="bar-fill"></div></div>
+        <div class="meta">
+          <span id="pos-text">&mdash;</span>
+          <span id="eta-text">&mdash;</span>
+        </div>
+      </div>
+
+      <div class="result hidden" id="result">
+        <div class="result-actions">
+          <a id="download-link" href="#" download>Download transcript</a>
+          <a class="secondary" href="#" id="new-file">Transcribe another</a>
+        </div>
+        <div class="preview" id="preview"></div>
+      </div>
+
+      <div class="error hidden" id="error"></div>
+    </div>
+
+    <footer>
+      Model: {{ model }} &middot; Running locally on your computer
+    </footer>
+  </div>
+
+  <script>
+    const drop = document.getElementById("drop");
+    const fileInput = document.getElementById("file-input");
+    const fileInfo = document.getElementById("file-info");
+    const fileNameEl = document.getElementById("file-name");
+    const clearBtn = document.getElementById("clear-file");
+    const startBtn = document.getElementById("start");
+    const progress = document.getElementById("progress");
+    const statusText = document.getElementById("status-text");
+    const pctText = document.getElementById("pct-text");
+    const barFill = document.getElementById("bar-fill");
+    const posText = document.getElementById("pos-text");
+    const etaText = document.getElementById("eta-text");
+    const result = document.getElementById("result");
+    const downloadLink = document.getElementById("download-link");
+    const newFileBtn = document.getElementById("new-file");
+    const preview = document.getElementById("preview");
+    const errorBox = document.getElementById("error");
+
+    let selectedFile = null;
+    let polling = null;
+
+    function fmtTime(sec) {
+      if (sec == null || isNaN(sec) || sec < 0) return "--:--:--";
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      const pad = (n) => n.toString().padStart(2, "0");
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.classList.remove("hidden");
+    }
+    function hideError() {
+      errorBox.classList.add("hidden");
+    }
+
+    function setFile(file) {
+      selectedFile = file;
+      if (file) {
+        fileNameEl.textContent = file.name;
+        fileInfo.classList.remove("hidden");
+        startBtn.disabled = false;
+      } else {
+        fileInfo.classList.add("hidden");
+        startBtn.disabled = true;
+        fileInput.value = "";
+      }
+    }
+
+    drop.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      drop.classList.add("dragover");
+    });
+    drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      drop.classList.remove("dragover");
+      if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length) setFile(e.target.files[0]);
+    });
+    clearBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setFile(null);
+    });
+
+    startBtn.addEventListener("click", async () => {
+      if (!selectedFile) return;
+      hideError();
+      startBtn.disabled = true;
+      drop.style.pointerEvents = "none";
+      drop.style.opacity = "0.5";
+      progress.classList.remove("hidden");
+      statusText.textContent = "Uploading…";
+      pctText.textContent = "";
+      barFill.style.width = "0%";
+
+      const form = new FormData();
+      form.append("audio", selectedFile);
+
+      let jobId;
+      try {
+        const resp = await fetch("/upload", { method: "POST", body: form });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          throw new Error(data.error || `Upload failed (${resp.status})`);
+        }
+        const data = await resp.json();
+        jobId = data.job_id;
+      } catch (err) {
+        showError(err.message);
+        resetUI();
+        return;
+      }
+
+      polling = setInterval(() => pollStatus(jobId), 1500);
+      pollStatus(jobId);
+    });
+
+    async function pollStatus(jobId) {
+      let data;
+      try {
+        const resp = await fetch(`/status/${jobId}`);
+        data = await resp.json();
+      } catch (err) {
+        return; // transient network hiccup; try again next tick
+      }
+
+      if (data.error) {
+        clearInterval(polling);
+        showError(data.error);
+        resetUI();
+        return;
+      }
+
+      const s = data.status;
+      if (s === "queued") {
+        statusText.textContent = "Queued…";
+      } else if (s === "loading_model") {
+        statusText.textContent = "Loading model…";
+      } else if (s === "transcribing") {
+        statusText.textContent = data.language
+          ? `Transcribing (${data.language})`
+          : "Transcribing…";
+        const pct = data.percent || 0;
+        barFill.style.width = pct.toFixed(1) + "%";
+        pctText.textContent = pct.toFixed(1) + "%";
+        posText.textContent = `${fmtTime(data.current_time)} / ${fmtTime(data.duration)}`;
+        if (data.eta != null && data.rate) {
+          etaText.textContent = `ETA ${fmtTime(data.eta)} · ${data.rate.toFixed(1)}× realtime`;
+        }
+      } else if (s === "done") {
+        clearInterval(polling);
+        barFill.style.width = "100%";
+        pctText.textContent = "100%";
+        statusText.textContent = "Done";
+        posText.textContent = `${fmtTime(data.duration)} / ${fmtTime(data.duration)}`;
+        etaText.textContent = "";
+        showResult(jobId);
+      } else if (s === "error") {
+        clearInterval(polling);
+        showError(data.error || "Transcription failed.");
+        resetUI();
+      }
+    }
+
+    async function showResult(jobId) {
+      downloadLink.href = `/download/${jobId}`;
+      result.classList.remove("hidden");
+      try {
+        const resp = await fetch(`/preview/${jobId}`);
+        if (resp.ok) {
+          const text = await resp.text();
+          if (text.trim()) {
+            preview.textContent = text;
+            preview.style.display = "block";
+          }
+        }
+      } catch (_) {
+        // preview is a nicety, ignore failures
+      }
+    }
+
+    newFileBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetUI();
+      setFile(null);
+    });
+
+    function resetUI() {
+      if (polling) { clearInterval(polling); polling = null; }
+      progress.classList.add("hidden");
+      result.classList.add("hidden");
+      preview.style.display = "none";
+      preview.textContent = "";
+      drop.style.pointerEvents = "";
+      drop.style.opacity = "";
+      startBtn.disabled = selectedFile == null;
+    }
+  </script>
+</body>
+</html>
